@@ -2,7 +2,7 @@
 // 실행: npm run test:api
 
 require("dotenv").config();
-const { getUsdKrwRate } = require("../lib/exchangeRate");
+const { getUsdKrwRate } = require("./lib/exchangeRate");
 
 async function main() {
   console.log("한국수출입은행 환율 API 호출 시도...");

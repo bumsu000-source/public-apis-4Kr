@@ -5,7 +5,7 @@
   "description": "해외주식 환율평가손익 통합 대시보드 (1단계: 환율 API 연동 확인, Vercel 배포용)",
   "type": "commonjs",
   "scripts": {
-    "test:api": "node scripts/test-api.js"
+    "test:api": "node test-api.js"
   },
   "devDependencies": {
     "dotenv": "^16.4.5"

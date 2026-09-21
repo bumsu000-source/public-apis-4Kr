@@ -19,7 +19,10 @@ async function loadRate() {
 
     if (!data.found) {
       stateText.classList.add("error");
-      stateText.textContent = `데이터를 가져오지 못했습니다: ${data.error || data.note || "확인 못 함"}`;
+      const causeText = data.cause
+        ? ` (원인 코드: ${data.cause.code || "확인 못 함"} / ${data.cause.message || ""})`
+        : "";
+      stateText.textContent = `데이터를 가져오지 못했습니다: ${data.error || data.note || "확인 못 함"}${causeText}`;
       return;
     }
 

@@ -8,6 +8,9 @@ module.exports = async (req, res) => {
     const result = await getUsdKrwRate(process.env.KOREAEXIM_API_KEY, date);
     res.status(200).json(result);
   } catch (err) {
-    res.status(502).json({ found: false, error: err.message });
+    const cause = err.cause
+      ? { code: err.cause.code, message: err.cause.message }
+      : null;
+    res.status(502).json({ found: false, error: err.message, cause });
   }
 };

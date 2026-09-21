@@ -1,38 +1,56 @@
-# 환율손익 대시보드 — 1단계
+# 환율손익 대시보드 — 1단계 (Vercel 배포용)
 
 `market-research.md`에서 정한 문제(주식평가손익 + 환율평가손익 + 총손익을 한 화면에서 확인)를 풀기 위한 첫 단계.
 지금 단계의 목표는 딱 하나: **한국수출입은행 환율 API에서 실제 숫자가 화면에 들어오는지 확인하는 것.**
 
-## 왜 이 구조인가
+## 구조 (Vercel 서버리스 방식)
 
-- 인증키(`KOREAEXIM_API_KEY`)는 `.env`에만 있고, 서버(`server.js`)만 이 키를 읽는다.
-- 브라우저(`public/app.js`)는 우리 서버의 `/api/exchange-rate`만 호출한다. 키를 브라우저가 볼 방법이 없다.
+```
+dashboard/
+  index.html, style.css, app.js   ← 정적 파일, Vercel이 그대로 서빙
+  api/exchange-rate.js            ← 서버리스 함수, /api/exchange-rate 로 배포됨
+  lib/exchangeRate.js             ← API 호출/파싱 공통 로직
+  scripts/test-api.js             ← 콘솔에서 API 응답만 확인하는 스크립트
+```
 
-## 실행 전 준비
+이전 버전은 `server.js`(`app.listen()`으로 계속 떠 있는 Express 서버) 방식이었는데, **이 구조는 Vercel에서 동작하지 않는다.** Vercel은 상시 실행되는 서버가 아니라 `api/` 폴더 안의 함수를 요청 시마다 실행하는 서버리스 방식이라, `server.js`를 그대로 올리면 배포가 실패하거나 API가 응답하지 않는다. 그래서 `api/exchange-rate.js`로 다시 만들었다.
 
-1. https://www.koreaexim.go.kr/ir/HPHKIR019M01 에서 Open API 키 발급 (이메일만 있으면 즉시 발급)
-2. `.env` 파일의 `KOREAEXIM_API_KEY=` 뒤에 발급받은 키 붙여넣기
+- 인증키(`KOREAEXIM_API_KEY`)는 Vercel 프로젝트의 환경변수로만 저장하고, `api/exchange-rate.js`만 이 값을 읽는다.
+- 브라우저(`app.js`)는 `/api/exchange-rate`만 호출한다. 키를 브라우저가 볼 방법이 없다.
 
-## 1) 먼저 API가 실제로 응답하는지 콘솔에서 확인
+## Vercel 배포 방법
+
+이 저장소(`public-apis-4Kr`)는 루트에 `README.md` 등 다른 파일이 많고, 실제 앱은 `dashboard/` 하위 폴더에 있다. **Vercel에서 프로젝트를 연결할 때 반드시 아래를 확인할 것:**
+
+1. Vercel → New Project → 이 GitHub 저장소 선택
+2. **Root Directory를 `dashboard`로 지정** (기본값인 저장소 루트로 두면 `package.json`을 못 찾아서 배포가 실패하거나 엉뚱하게 빌드된다 — 지금까지 겪은 오류의 원인일 가능성이 높음)
+3. Framework Preset은 "Other"로 둔다 (빌드 명령 없음, Output Directory는 기본값)
+4. Project Settings → Environment Variables에 `KOREAEXIM_API_KEY` 추가 (발급: https://www.koreaexim.go.kr/ir/HPHKIR019M01)
+5. Deploy
+
+## 로컬에서 확인하는 방법
+
+### 1) API 응답만 콘솔로 확인 (가장 빠름)
 
 ```
 npm install
+# .env 파일에 KOREAEXIM_API_KEY=발급받은키 입력
 npm run test:api
 ```
 
-성공하면 오늘 원/달러 매매기준율과, 응답에 어떤 필드가 들어있는지(`cur_unit`, `deal_bas_r`, `ttb`, `tts` 등) 콘솔에 그대로 출력된다.
+성공하면 오늘 원/달러 매매기준율과 응답 필드 목록(`cur_unit`, `deal_bas_r`, `ttb`, `tts` 등)이 콘솔에 출력된다.
 
-> 이 저장소를 만든 클라우드 세션은 외부 네트워크 호출이 정책상 막혀 있어서, 이 저장소 안에서는 실제 호출 성공을 확인하지 못했다.
-> `.env`에 키를 넣지 않은 상태로 실행하면 "KOREAEXIM_API_KEY가 설정되지 않았습니다" 에러가, 임시 키로 실행하면 `HTTP 403`(프록시 차단) 에러가 뜨는 것까지는 확인했다 — 즉 에러 처리 로직 자체는 정상 동작한다.
-> **로컬(또는 외부 네트워크가 열린 환경)에서 실제 키로 `npm run test:api`를 실행해 진짜 숫자가 오는지 반드시 확인할 것.**
+> 이 프로젝트를 만든 클라우드 세션은 외부 네트워크 호출이 정책상 막혀 있어서, 실제 호출 성공은 이 환경 안에서 확인하지 못했다. 키 없이 실행 시 "키 없음" 에러가, 임시 키로는 프록시 차단(`HTTP 403`)이 뜨는 것까지는 확인했다 — 에러 처리 로직 자체는 정상 동작한다. **로컬(또는 외부 네트워크가 열린 환경)에서 실제 키로 반드시 재확인할 것.**
 
-## 2) 화면 확인
+### 2) 화면까지 포함해서 확인 (Vercel 환경과 동일하게)
+
+Vercel CLI로 로컬에서 서버리스 함수 + 정적 파일을 실제 배포와 똑같은 방식으로 띄울 수 있다.
 
 ```
-npm start
+npx vercel dev
 ```
 
-`http://localhost:3000` 접속 → 오늘 환율 숫자와 응답 필드 목록이 화면에 뜨는지 확인.
+`http://localhost:3000`(또는 안내되는 포트) 접속 → 오늘 환율 숫자와 응답 필드 목록이 화면에 뜨는지 확인.
 API 호출이 실패하면 숫자 대신 에러 메시지가 화면에 뜬다(조용히 숨기지 않음).
 
 모바일 폭에서 가로 스크롤이 생기지 않도록 `max-width: 480px` 컨테이너 + `overflow-x: hidden` + 상대 단위(`clamp`, `%`)로 구성했다. 실제 휴대폰 또는 브라우저 반응형 모드(375px 폭 등)에서 좌우로 밀리지 않는지 확인 필요.
